@@ -1,0 +1,1 @@
+Configuração assíncrona de banco único. A URL vem de app.core.config.get_settings().

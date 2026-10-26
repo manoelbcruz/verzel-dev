@@ -1,0 +1,44 @@
+# Segredos e configuração local
+.env
+.env.*
+!.env.example
+.dev.vars
+*.key
+*.pem
+secrets/
+
+# Python
+.venv/
+venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Node
+node_modules/
+dist/
+*.tsbuildinfo
+npm-debug.log*
+
+# Banco local e dados gerados
+*.db
+*.db-wal
+*.db-shm
+pgdata/
+
+# Sistema e editor
+.DS_Store
+Thumbs.db
+desktop.ini
+*:Zone.Identifier
+.vscode/*
+!.vscode/extensions.json
+.idea/
+*.log
+
+# Handoff da dupla Claude+Codex
+.handoff/
