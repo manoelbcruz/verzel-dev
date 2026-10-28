@@ -10,7 +10,8 @@ from sqlalchemy.ext.asyncio import AsyncEngine
 from app.core.chaves import Chaves, carregar_chaves
 from app.core.config import Settings
 from app.db.session import Fabrica, criar_engine, criar_fabrica
-from app.services.notificacoes import Publicador, PublicadorNulo
+from app.services.notificacoes import Publicador
+from app.services.tempo_real import CentralTempoReal
 
 if TYPE_CHECKING:
     from app.integrations.met import MetCliente
@@ -25,7 +26,9 @@ class Recursos:
     http: httpx.AsyncClient
     met: "MetCliente"
     publicador: Publicador
+    central: CentralTempoReal
     lotes_bloqueados: set[int] = field(default_factory=set)
+    contas_demo: list = field(default_factory=list)
 
 
 @asynccontextmanager
@@ -45,6 +48,7 @@ async def abrir_recursos(
             follow_redirects=False,
             headers={"User-Agent": "casa-de-leiloes/0.1 (teste tecnico)"},
         ) as http:
+            central = CentralTempoReal(settings.ws_max_conexoes, settings.ws_tamanho_fila)
             recursos = Recursos(
                 settings,
                 chaves,
@@ -52,9 +56,16 @@ async def abrir_recursos(
                 fabrica,
                 http,
                 MetCliente(http, CacheMetBanco(fabrica), settings.met_base_url),
-                publicador if publicador is not None else PublicadorNulo(),
+                publicador if publicador is not None else central,
+                central,
             )
             async with anyio.create_task_group() as grupo:
+                if settings.seed_demo:
+                    from app.demo.seed import garantir_demonstracao, laco_demonstracao
+
+                    with anyio.move_on_after(60):
+                        await garantir_demonstracao(recursos)
+                    grupo.start_soon(laco_demonstracao, recursos)
                 if iniciar_worker:
                     from app.services.encerramento import laco_encerramento
 
@@ -62,6 +73,7 @@ async def abrir_recursos(
                 try:
                     yield recursos
                 finally:
+                    central.encerrar_todas(1012)
                     grupo.cancel_scope.cancel()
     finally:
         await engine.dispose()

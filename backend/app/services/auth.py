@@ -150,11 +150,14 @@ async def logout(recursos, token):
     if token:
         async with recursos.fabrica() as s, s.begin():
             await preparar_escrita(s)
-            await s.execute(
+            sessao_id = await s.scalar(
                 update(Sessao)
                 .where(
                     Sessao.token_hash == hashlib.sha256(token.encode()).digest(),
                     Sessao.revogada_em.is_(None),
                 )
                 .values(revogada_em=func.clock_timestamp())
+                .returning(Sessao.id)
             )
+        return sessao_id
+    return None

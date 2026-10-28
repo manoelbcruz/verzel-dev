@@ -35,7 +35,9 @@ async def login(entrada: LoginEntrada, response: Response, recursos: RecursosDep
 
 @router.post("/logout", status_code=204)
 async def logout(request: Request, recursos: RecursosDep):
-    await auth.logout(recursos, request.cookies.get("sessao"))
+    sessao_id = await auth.logout(recursos, request.cookies.get("sessao"))
+    if sessao_id is not None:
+        recursos.central.encerrar_sessao(sessao_id)
     response = Response(status_code=204)
     response.delete_cookie(
         "sessao", path="/", secure=recursos.settings.cookie_secure, httponly=True, samesite="lax"

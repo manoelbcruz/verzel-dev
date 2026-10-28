@@ -9,10 +9,13 @@ MAX_CENTAVOS = 1_000_000_000_000
 MAX_DEPOSITO = 100_000_000
 LIMITE_SALDO_DEPOSITO = 1_000_000_000_000
 JS_MAX_SEGURO = 9_007_199_254_740_991
+SENHA_DEMO_PUBLICA = "leilao-demo-2026"
 
 
 class Settings(BaseSettings):
-    model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
+    model_config = SettingsConfigDict(
+        env_file=".env", env_file_encoding="utf-8", extra="ignore", hide_input_in_errors=True
+    )
 
     database_url: str = "postgresql+psycopg://leilao:leilao@localhost:5432/leilao"
     cors_origins: Annotated[list[str], NoDecode] = ["http://localhost:5173"]
@@ -25,6 +28,26 @@ class Settings(BaseSettings):
     imagem_max_bytes: int = Field(default=5_000_000, ge=1, le=5_000_000)
     sessao_dias: int = Field(default=7, ge=1)
     encerramento_intervalo_s: float = Field(default=1.0, gt=0)
+    seed_demo: bool = False
+    seed_intervalo_s: float = Field(default=3600.0, gt=0)
+    senha_demo: SecretStr = SecretStr(SENHA_DEMO_PUBLICA)
+    frontend_dist: str | None = None
+    ws_max_conexoes: int = Field(default=500, ge=1)
+    ws_tamanho_fila: int = Field(default=64, ge=1)
+    ws_intervalo_ping_s: float = Field(default=25.0, gt=0)
+    ws_revalidar_s: float = Field(default=300.0, gt=0)
+
+    @field_validator("senha_demo")
+    @classmethod
+    def validar_senha_demo(cls, value: SecretStr) -> SecretStr:
+        if not 8 <= len(value.get_secret_value()) <= 128:
+            raise ValueError("SENHA_DEMO deve ter entre 8 e 128 caracteres")
+        return value
+
+    @field_validator("frontend_dist", mode="before")
+    @classmethod
+    def normalizar_frontend_dist(cls, value: object) -> object:
+        return value.strip() or None if isinstance(value, str) else value
 
     @property
     def producao(self) -> bool:

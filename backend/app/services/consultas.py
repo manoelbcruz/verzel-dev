@@ -266,7 +266,7 @@ async def painel(recursos, usuario):
             total_recebido_centavos=int(total),
             lotes=[
                 LotePainel(
-                    **montar_resumo(lote, agora).model_dump(),
+                    **montar_resumo(lote, agora, usuario, detalhe=True).model_dump(),
                     cancelavel=cancelavel(lote, agora, usuario),
                 )
                 for lote in lotes

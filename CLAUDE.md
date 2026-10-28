@@ -45,6 +45,27 @@ O banco de teste precisa terminar em `_test`, porque a suíte trunca as tabelas.
   `REPEATABLE READ READ ONLY`.
 - Erros seguem o contrato `{"erro": {"codigo", "mensagem", "detalhes"}}`, com códigos estáveis em
   `app/core/erros.py`.
+- Tempo real: `app/api/tempo_real.py` (rota `/ws`) e `app/services/tempo_real.py` (central em memória,
+  que é o publicador pós-commit). A mensagem é só um sinal (`v`, `tipo`, `lote_id`, `versao`), e o
+  front refaz o GET. `carteira_atualizada` vai só às conexões do próprio usuário. Handshake: `Origin`
+  antes de tocar no banco, cookie `sessao`, revalidação periódica, e logout fecha a conexão com 4001.
+- `app/demo/` é o seed de demonstração (`SEED_DEMO=true`): roda no startup e a cada hora, sob trava
+  consultiva, só pelos serviços do núcleo, com chaves idempotentes estáveis. Snapshots e imagens dos
+  itens ficam em `app/demo/dados/`, sem depender do Met. `python -m app.demo` roda uma vez.
+- `app/web/spa.py` serve o build do front pela própria API quando `FRONTEND_DIST` está definido (deploy
+  num único processo e numa única origem). Localmente, o compose usa o nginx do container do front.
+
+## Arquitetura do front-end
+
+- `src/api/`: cliente HTTP (`http.ts`), tipos espelhando `backend/app/schemas` (`tipos.ts`), leituras
+  e mutações do React Query, e `sessao.ts`, que concentra a troca de identidade.
+- Toda troca de identidade (login, cadastro, logout, sessão expirada) passa por `trocarIdentidade`:
+  incrementa uma geração, cancela leituras, zera os dados pessoais, remonta as rotas e reinicia o
+  WebSocket. Mutação iniciada numa geração anterior não toca o cache.
+- `src/lib/`: dinheiro (`dinheiro.ts`, parse de reais por string, sem float), mensagens por código de
+  erro (`erros.ts`), relógio do servidor (`relogio.ts`), fases, datas, tema e chave idempotente.
+- `src/tempoReal/`: conexão com reconexão e despachante de invalidações.
+- O relógio vem do servidor (`servidor_agora` ou cabeçalho `Date`), nunca do navegador.
 
 ## Regras do enunciado
 
@@ -95,7 +116,11 @@ O banco de teste precisa terminar em `_test`, porque a suíte trunca as tabelas.
 ## Escopo
 
 - Cancelamento com estorno fica fora, porque só se cancela lote sem lance.
-- O WebSocket roda no mesmo processo, com um único worker de aplicação.
+- O WebSocket roda no mesmo processo, com um único worker de aplicação. Mais de um worker
+  dividiria as conexões entre centrais que não se falam.
+- As contas de demonstração são públicas (senha no README e em `GET /api/demo`, que alimenta o
+  acesso rápido do login). Elas controlam os lotes e reservas do seed, e o seed repõe saldo e lotes,
+  mas não desfaz lance de visitante.
 
 ## Convenções
 

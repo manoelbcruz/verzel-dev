@@ -139,6 +139,10 @@ async def test_fluxo_http_privacidade_notificacoes(recursos):
         assert perdeu["situacao"] == "nao_arrematado" and perdeu["comprovante_codigo"] is None
         codigo = participacoes[0]["comprovante_codigo"]
         assert (await dono.get("/api/leiloeiro/lotes")).json()["total_recebido_centavos"] == 110
+        painel = (await dono.get("/api/leiloeiro/lotes")).json()
+        assert painel["lotes"][0]["resultado"]["comprovante_codigo"] == codigo
+        vitrine_publica = (await dono.get("/api/lotes")).json()
+        assert vitrine_publica["encerrados"][0]["resultado"]["comprovante_codigo"] is None
         assert (await b.get(caminho)).json()["resultado"]["comprovante_codigo"] == codigo
         assert (await a.get(caminho)).json()["resultado"]["comprovante_codigo"] is None
         async with httpx.AsyncClient(

@@ -30,6 +30,22 @@ estão no `CLAUDE.md`, e a revisão parte delas.
   caminho com padrão.
 - **Segredos**: chave HMAC nunca em log, banco ou resposta. O engine mantém `hide_parameters=True`.
 - **Migration**: toda `CheckConstraint` tem nome, e a migration bate com a metadata.
+- **WebSocket**: a mensagem continua só sinal, sem dado de domínio. `Origin` é conferido antes de
+  qualquer acesso ao banco. Sinal privado só para o próprio usuário. Toda conexão registrada sai da
+  central em qualquer caminho de falha, e logout ou sessão revogada fecha a conexão sem entregar o que
+  estava na fila.
+- **Seed**: só pelos serviços do núcleo, nunca `INSERT` ou `UPDATE` direto. Idempotente sob reinício
+  e com dois processos. Nunca derruba a subida da aplicação.
+- **SPA**: arquivo servido só a partir do que foi carregado na memória, nunca de caminho montado pela
+  URL. `/api` e `/ws` nunca recebem HTML. `Referrer-Policy` fica `same-origin`, porque `no-referrer`
+  pode mandar `Origin: null` e o CSRF recusa.
+- **Front, dinheiro**: reais convertidos para centavos por string, sem `parseFloat`, `toFixed` ou
+  `Math.round`. Valor fora de inteiro seguro mostra "valor inválido" e não derruba a tela.
+- **Front, identidade**: toda troca de conta passa por `trocarIdentidade`. Nenhuma tela mostra dado
+  da identidade anterior, e mutação de geração antiga não toca o cache.
+- **Front, idempotência**: a chave é reaproveitada só quando a tentativa anterior ficou incerta, para o
+  mesmo alvo e o mesmo valor.
+- **Front, relógio**: contagem regressiva e fases pelo relógio do servidor.
 
 ## Testes exigidos
 
@@ -41,6 +57,10 @@ estão no `CLAUDE.md`, e a revisão parte delas.
 - Proteção nova contra adulteração: caso em `tests/test_auditoria_adulteracao.py` com o código de
   falha esperado, e um teste que falhe se a proteção for removida.
 - Rota nova: código de erro e formato da resposta conferidos pelo cliente HTTP de teste.
+- WebSocket: o driver ASGI em processo (`tests/ws_asgi.py`) cobre handshake, isolamento e corridas sem
+  socket real. O teste com uvicorn real fica marcado `pg`.
+- Front: componente ou hook com lógica nova ganha teste no Vitest. Cabeçalho de segurança e texto de
+  contrato se conferem por valor literal, nunca comparando com a constante do próprio código.
 
 ## Severidade
 

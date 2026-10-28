@@ -10,15 +10,18 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 from app.api.auth import router as auth_router
 from app.api.carteira import router as carteira_router
 from app.api.comprovantes import router as comprovantes_router
+from app.api.demo import router as demo_router
 from app.api.health import router as health_router
 from app.api.leiloeiro import router as leiloeiro_router
 from app.api.lotes import router as lotes_router
 from app.api.me import router as me_router
 from app.api.midias import router as midias_router
+from app.api.tempo_real import router as tempo_real_router
 from app.core.config import get_settings
 from app.core.erros import ErroApi, Recusa
 from app.core.seguranca import ProtecaoCSRF
 from app.recursos import abrir_recursos
+from app.web.spa import ArquivosSpa
 
 logger = logging.getLogger(__name__)
 
@@ -27,6 +30,7 @@ def create_app(
     settings=None, *, recursos=None, transporte_http=None, iniciar_worker=True
 ) -> FastAPI:
     settings = settings or (recursos.settings if recursos is not None else get_settings())
+    spa = ArquivosSpa.carregar(settings.frontend_dist) if settings.frontend_dist else None
 
     @asynccontextmanager
     async def lifespan(app):
@@ -74,6 +78,10 @@ def create_app(
 
     @app.exception_handler(StarletteHTTPException)
     async def erro_http(request: Request, exc: StarletteHTTPException):
+        if spa is not None and exc.status_code == 404 and request.method in {"GET", "HEAD"}:
+            resposta = spa.responder(request.url.path, request.method)
+            if resposta is not None:
+                return resposta
         codigo = {404: "nao_encontrado", 405: "metodo_nao_permitido"}.get(
             exc.status_code, "entrada_invalida" if 400 <= exc.status_code < 500 else "erro_interno"
         )
@@ -87,9 +95,11 @@ def create_app(
         return JSONResponse(erro.corpo(), status_code=erro.status)
 
     app.include_router(health_router, prefix="/api")
+    app.include_router(tempo_real_router)
     app.include_router(auth_router, prefix="/api")
     for router in (
         carteira_router,
+        demo_router,
         comprovantes_router,
         leiloeiro_router,
         lotes_router,

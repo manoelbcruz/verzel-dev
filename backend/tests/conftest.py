@@ -3,6 +3,8 @@ import secrets
 
 import pytest
 
+os.environ["FRONTEND_DIST"] = ""
+
 from app.core.chaves import Chaves
 from app.core.config import Settings
 
@@ -26,6 +28,8 @@ def settings_teste(chaves):
         cors_origins=["http://test"],
         db_pool_size=12,
         db_max_overflow=12,
+        seed_demo=False,
+        frontend_dist=None,
     )
 
 
