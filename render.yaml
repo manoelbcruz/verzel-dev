@@ -1,0 +1,22 @@
+services:
+  - type: web
+    name: casa-de-leiloes
+    runtime: docker
+    plan: free
+    region: virginia
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    healthCheckPath: /api/health
+    envVars:
+      - key: ENVIRONMENT
+        value: production
+      - key: SEED_DEMO
+        value: "true"
+      - key: DATABASE_URL
+        sync: false
+      - key: CHAVE_INTEGRIDADE
+        sync: false
+      - key: CHAVE_PRIVACIDADE
+        sync: false
+      - key: CORS_ORIGINS
+        sync: false
